@@ -262,14 +262,16 @@ function requestSingleplayerStart() {
         difficulty: 'medium',
         algorithm: aiModelSelect.value,
         depth: aiModelSelect.value === 'minmax' ? 3 : null,
-        iterations: aiModelSelect.value === 'mcts' ? 100 : null
+        iterations: aiModelSelect.value === 'mcts' ? 100 : null,
+        engine_scope: 'browser'
     });
 
     socket.emit('set_ai', {
         game_id: currentGameId,
         color: aiColor === 'black' ? 'white' : 'black',
         difficulty: 'medium',
-        algorithm: 'none'
+        algorithm: 'none',
+        engine_scope: 'browser'
     });
 
     socket.emit('get_ai_info', { game_id: currentGameId });
@@ -562,13 +564,15 @@ function clearAIPlayers() {
         game_id: currentGameId,
         color: 'black',
         difficulty: 'medium',
-        algorithm: 'none'
+        algorithm: 'none',
+        engine_scope: 'browser'
     });
     socket.emit('set_ai', {
         game_id: currentGameId,
         color: 'white',
         difficulty: 'medium',
-        algorithm: 'none'
+        algorithm: 'none',
+        engine_scope: 'browser'
     });
 }
 

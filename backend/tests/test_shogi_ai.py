@@ -9,6 +9,7 @@ from game_store import (
     set_game_entry,
 )  # noqa: E402
 from handlers.shogi_ai_support import (
+    get_current_shogi_ai_config,
     run_shogi_ai_turns,
     start_shogi_ai_turns_if_needed,
 )  # noqa: E402
@@ -197,6 +198,21 @@ class TestShogiAI(unittest.TestCase):
         self.assertEqual(len(socketio.started_tasks), 2)
         self.assertEqual(game_id in games, True)
         self.assertIsNotNone(ai_runtime_state.get(game_id))
+
+    def test_browser_scope_disables_server_shogi_ai_config(self):
+        game_id = "browser-scope-test"
+        state = ShogiGameState()
+        set_game_entry(game_id, "shogi", state)
+        settings = ensure_ai_settings(game_id)
+        settings["engine_scope"] = "browser"
+        settings["black_ai"] = {
+            "engine": "rule_based",
+            "algorithm": "rule_based",
+            "game_type": "shogi",
+        }
+
+        config = get_current_shogi_ai_config(game_id, state)
+        self.assertIsNone(config)
 
 
 if __name__ == "__main__":

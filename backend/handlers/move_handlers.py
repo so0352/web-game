@@ -2,7 +2,12 @@ from flask import request
 from flask_socketio import emit
 
 from game_logic import Player
-from game_store import build_game_state_payload, get_game_entry, get_game_mode
+from game_store import (
+    ai_settings,
+    build_game_state_payload,
+    get_game_entry,
+    get_game_mode,
+)
 from handlers.matchmaking_handlers import get_multiplayer_slot
 from handlers.shogi_ai_support import run_shogi_ai_turns
 
@@ -57,7 +62,10 @@ def register_move_handlers(socketio):
             if game.make_move(move):
                 game_state = build_game_state_payload(game_type, game)
                 emit("game_state", game_state, room=game_id)
-                run_shogi_ai_turns(socketio, game_id, max_turns=1, sid=request.sid)
+                settings = ai_settings.get(game_id) or {}
+                engine_scope = str(settings.get("engine_scope") or "server").lower()
+                if engine_scope == "server":
+                    run_shogi_ai_turns(socketio, game_id, max_turns=1, sid=request.sid)
             else:
                 emit("error", {"message": "Invalid shogi move"}, room=request.sid)
             return

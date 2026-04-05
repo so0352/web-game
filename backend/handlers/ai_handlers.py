@@ -86,8 +86,8 @@ def register_ai_handlers(socketio):
             emit("error", {"message": "Invalid AI color"}, room=request.sid)
             return
 
-        if game_type == "shogi":
-            # If current turn is AI after configuration, progress one or more turns.
+        if game_type == "shogi" and settings.get("engine_scope", "server") == "server":
+            # In server scope, if current turn is AI after configuration, progress turns.
             run_shogi_ai_turns(socketio, game_id, max_turns=40, sid=request.sid)
 
         game_state = build_game_state_payload(game_type, game)

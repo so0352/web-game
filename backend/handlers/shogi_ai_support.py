@@ -12,6 +12,10 @@ from game_store import (
 
 def get_current_shogi_ai_config(game_id, game):
     settings = ai_settings.get(game_id) or {}
+    engine_scope = str(settings.get("engine_scope") or "server").lower()
+    if engine_scope != "server":
+        return None
+
     key = "black_ai" if game.current_player == 1 else "white_ai"
     config = settings.get(key)
     if not isinstance(config, dict):

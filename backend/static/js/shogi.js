@@ -11,6 +11,8 @@ let boardTransitionTimer = null;
 let turnIndicatorTimer = null;
 let thinkingHideTimer = null;
 let resizeSyncTimer = null;
+let browserAITurnToken = 0;
+let browserAITurnRunning = false;
 let thinkingStartedAt = 0;
 let isThinkingIndicatorVisible = false;
 let autoRotateBoard = false;
@@ -318,7 +320,7 @@ function requestShogiSingleStart() {
         depth: 2,
         iterations: 220,
         time_budget_ms: 800,
-        engine_scope: 'server'
+        engine_scope: 'browser'
     });
 
     shogiSocket.emit('set_ai', {
@@ -327,7 +329,7 @@ function requestShogiSingleStart() {
         algorithm: 'none',
         engine: 'none',
         difficulty: 'medium',
-        engine_scope: 'server'
+        engine_scope: 'browser'
     });
 
     shogiSocket.emit('get_ai_info', { game_id: currentShogiGameId });
@@ -377,6 +379,107 @@ function setThinkingIndicator(active, player = null, algorithm = null) {
     }, remaining);
 }
 
+function cancelBrowserAITurn() {
+    browserAITurnToken += 1;
+    browserAITurnRunning = false;
+}
+
+function isBrowserAIScope() {
+    return (shogiAIInfo.engine_scope || 'server') === 'browser';
+}
+
+function getCurrentTurnColor() {
+    if (!shogiState) {
+        return null;
+    }
+    return shogiState.current_player === 1 ? 'black' : 'white';
+}
+
+function getCurrentTurnAIConfig() {
+    const color = getCurrentTurnColor();
+    if (!color) {
+        return null;
+    }
+    return color === 'black' ? shogiAIInfo.black_ai : shogiAIInfo.white_ai;
+}
+
+function shouldRunBrowserAITurn() {
+    if (shogiGameMode !== 'singleplayer') {
+        return false;
+    }
+    if (!currentShogiGameId || !shogiState || shogiState.game_over) {
+        return false;
+    }
+    if (!isBrowserAIScope()) {
+        return false;
+    }
+    if (!Array.isArray(shogiState.valid_moves) || shogiState.valid_moves.length === 0) {
+        return false;
+    }
+    const aiConfig = getCurrentTurnAIConfig();
+    if (!aiConfig) {
+        return false;
+    }
+    const engine = normalizeShogiEngine(aiConfig.engine || aiConfig.algorithm || 'none');
+    return engine !== 'none';
+}
+
+function triggerBrowserAITurnIfNeeded() {
+    if (!shouldRunBrowserAITurn() || browserAITurnRunning) {
+        return;
+    }
+
+    const aiConfig = getCurrentTurnAIConfig();
+    const aiColor = getCurrentTurnColor();
+    const turnToken = browserAITurnToken + 1;
+    browserAITurnToken = turnToken;
+    browserAITurnRunning = true;
+
+    setThinkingIndicator(true, aiColor, aiConfig ? (aiConfig.engine || aiConfig.algorithm) : null);
+
+    window.setTimeout(() => {
+        if (turnToken !== browserAITurnToken) {
+            return;
+        }
+
+        try {
+            const selector = window.ShogiBrowserAI && window.ShogiBrowserAI.selectMove;
+            if (!selector) {
+                setStatus('ブラウザAIが初期化されていません');
+                setThinkingIndicator(false);
+                browserAITurnRunning = false;
+                return;
+            }
+
+            const selectedMove = selector(shogiState, aiConfig || {});
+            if (!selectedMove) {
+                setThinkingIndicator(false);
+                browserAITurnRunning = false;
+                return;
+            }
+
+            shogiSocket.emit('make_move', {
+                game_id: currentShogiGameId,
+                move: {
+                    from: selectedMove.from,
+                    to: selectedMove.to,
+                    drop_piece: selectedMove.drop_piece,
+                    promote: !!selectedMove.promote,
+                }
+            });
+            setThinkingIndicator(false);
+        } catch (error) {
+            console.error('Browser shogi AI move selection failed:', error);
+            setStatus('ブラウザAIの手生成でエラーが発生しました');
+            setThinkingIndicator(false);
+        } finally {
+            if (turnToken === browserAITurnToken) {
+                browserAITurnRunning = false;
+            }
+        }
+    }, 40);
+}
+
 function initBoard() {
     const board = document.getElementById('shogi-board');
     board.innerHTML = '';
@@ -394,6 +497,7 @@ function initBoard() {
 }
 
 function clearUiForPendingState(message) {
+    cancelBrowserAITurn();
     shogiState = null;
     selectedFrom = null;
     selectedDropPiece = null;
@@ -600,6 +704,7 @@ function setupSocket() {
     });
 
     shogiSocket.on('disconnect', () => {
+        cancelBrowserAITurn();
         clearUiForPendingState('接続が切断されました。再接続を待っています...');
         setShogiMatchStatus('接続が切断されました。再接続中です...', true);
     });
@@ -665,6 +770,7 @@ function setupSocket() {
     });
 
     shogiSocket.on('match_ended', (data) => {
+        cancelBrowserAITurn();
         shogiRoleChoicePending = false;
         setShogiRoleButtonsDisabled(false);
         shogiMatchResumeAllowed = false;
@@ -712,6 +818,7 @@ function setupSocket() {
 
         shogiState = state;
         renderState();
+        triggerBrowserAITurnIfNeeded();
     });
 
     shogiSocket.on('error', (data) => {
@@ -721,6 +828,7 @@ function setupSocket() {
     shogiSocket.on('ai_info', (info) => {
         shogiAIInfo = info || { black_ai: null, white_ai: null, engine_scope: 'server' };
         syncAIControlsFromInfo();
+        triggerBrowserAITurnIfNeeded();
     });
 
     shogiSocket.on('ai_updated', () => {
@@ -776,7 +884,7 @@ function emitAISetting(color) {
             algorithm: 'none',
             engine: 'none',
             difficulty,
-            engine_scope: 'server'
+            engine_scope: 'browser'
         });
         return;
     }
@@ -791,7 +899,7 @@ function emitAISetting(color) {
         depth: config.depth,
         iterations: config.iterations,
         time_budget_ms: config.timeBudgetMs,
-        engine_scope: 'server'
+        engine_scope: 'browser'
     });
 }
 
