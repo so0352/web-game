@@ -4,6 +4,14 @@
     --panel-bg: #f9f4e7;
     --accent: #ac3f2d;
     --valid: #2e8b57;
+    --board-cell-size: 58px;
+    --board-grid-gap: 1px;
+    --board-padding: 10px;
+    --board-border: 4px;
+    --board-size: calc((var(--board-cell-size) * 9) + (var(--board-grid-gap) * 8));
+    --board-outer-size: calc(var(--board-size) + (var(--board-padding) * 2) + (var(--board-border) * 2));
+    --shogi-side-width: 320px;
+    --shogi-main-gap: 16px;
 }
 
 body {
@@ -40,8 +48,10 @@ body {
 .shogi-main {
     margin-top: 14px;
     display: grid;
-    grid-template-columns: auto 320px;
-    gap: 16px;
+    grid-template-columns: var(--board-outer-size) minmax(280px, var(--shogi-side-width));
+    gap: var(--shogi-main-gap);
+    align-items: start;
+    justify-content: center;
 }
 
 .shogi-matchmaking {
@@ -163,11 +173,13 @@ body {
     border: 4px solid #8b6a32;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
     border-radius: 8px;
-    padding: 10px;
+    box-sizing: border-box;
+    width: var(--board-outer-size);
+    padding: var(--board-padding);
     display: grid;
-    grid-template-columns: repeat(9, 58px);
-    grid-template-rows: repeat(9, 58px);
-    gap: 1px;
+    grid-template-columns: repeat(9, var(--board-cell-size));
+    grid-template-rows: repeat(9, var(--board-cell-size));
+    gap: var(--board-grid-gap);
     transform: rotate(0deg) scale(1);
     transform-origin: center center;
     transition: transform 0.76s cubic-bezier(0.18, 0.84, 0.22, 1.18), box-shadow 0.76s ease;
@@ -471,9 +483,18 @@ body {
     background: #5f6368;
 }
 
+@media (max-width: 1100px) {
+    .shogi-main {
+        gap: 12px;
+        grid-template-columns: var(--board-outer-size) minmax(260px, 300px);
+    }
+}
+
 @media (max-width: 980px) {
     .shogi-main {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        justify-content: stretch;
+        gap: 12px;
     }
 
     #shogi-board {
@@ -481,6 +502,7 @@ body {
         grid-template-columns: repeat(9, minmax(34px, 1fr));
         grid-template-rows: repeat(9, minmax(34px, 1fr));
         width: min(95vw, 600px);
+        max-width: 100%;
         aspect-ratio: 1 / 1;
         transition-duration: 0.7s;
     }

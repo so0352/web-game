@@ -10,6 +10,7 @@ let suppressTurnAnimation = true;
 let boardTransitionTimer = null;
 let turnIndicatorTimer = null;
 let thinkingHideTimer = null;
+let resizeSyncTimer = null;
 let thinkingStartedAt = 0;
 let isThinkingIndicatorVisible = false;
 let autoRotateBoard = false;
@@ -535,6 +536,39 @@ function animateTurnIndicator(animateTurnChange) {
         }
         turnIndicatorTimer = null;
     }, TURN_ROTATION_MS + 80);
+}
+
+function syncBoardLayoutAfterResize() {
+    const board = document.getElementById('shogi-board');
+    if (!board) {
+        return;
+    }
+
+    if (boardTransitionTimer) {
+        clearTimeout(boardTransitionTimer);
+        boardTransitionTimer = null;
+    }
+    board.classList.remove('turn-transition');
+
+    const turnEl = document.getElementById('turn-text');
+    if (turnEl) {
+        turnEl.classList.remove('turn-switch');
+    }
+
+    updateBoardOrientation(false);
+}
+
+function setupWindowResizeSync() {
+    window.addEventListener('resize', () => {
+        if (resizeSyncTimer) {
+            clearTimeout(resizeSyncTimer);
+        }
+
+        resizeSyncTimer = setTimeout(() => {
+            resizeSyncTimer = null;
+            syncBoardLayoutAfterResize();
+        }, 120);
+    });
 }
 
 function setupSocket() {
@@ -1087,6 +1121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncAutoRotateToggleState();
     setupSocket();
     setupControls();
+    setupWindowResizeSync();
 });
 
 window.addEventListener('pageshow', (event) => {
