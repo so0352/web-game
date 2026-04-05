@@ -777,7 +777,8 @@ footer {
     }
 
     #game-side-panel {
-        display: none;
+        grid-row: auto;
+        margin-top: 0.5rem;
     }
 
     h1 {
@@ -786,6 +787,16 @@ footer {
 }
 
 @media (max-width: 480px) {
+    #game-side-panel {
+        margin-top: 0.25rem;
+    }
+
+    .game-info-panel,
+    .controls-panel,
+    .matchmaking-panel {
+        padding: 1rem;
+    }
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
