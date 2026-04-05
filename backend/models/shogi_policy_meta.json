@@ -1,0 +1,16 @@
+{
+  "training": {
+    "games": 1,
+    "max_plies": 8,
+    "teacher_depth": 1,
+    "learning_rate": 0.08,
+    "epochs": 2,
+    "l2": 0.0001,
+    "seed": 7
+  },
+  "dataset": {
+    "samples": 374,
+    "feature_dim": 18,
+    "positive_ratio": 0.02139037474989891
+  }
+}

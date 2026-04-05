@@ -1,0 +1,30 @@
+services:
+  othello:
+    build: .
+    expose:
+      - "5000"
+    environment:
+      - PORT=5000
+      - FLASK_DEBUG=0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - SOCKETIO_CORS_ALLOWED_ORIGINS=https://${PUBLIC_DOMAIN:-localhost}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8.4
+    depends_on:
+      - othello
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - PUBLIC_DOMAIN=${PUBLIC_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

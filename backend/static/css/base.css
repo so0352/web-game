@@ -1,0 +1,13 @@
+:root {
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo', sans-serif;
+    --font-serif: ui-serif, 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+}

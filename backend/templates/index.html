@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+</head>
+
+<body class="home-body">
+    <main class="home-shell">
+        <header class="home-header">
+            <h1>Game Home</h1>
+            <p>遊ぶゲームを選択してください。</p>
+        </header>
+
+        <section class="game-grid">
+            <article class="game-card othello">
+                <span class="badge live">Live</span>
+                <h2>オセロ</h2>
+                <p>人間対戦とAI対戦が利用できます。今すぐプレイ可能です。</p>
+                <a class="home-btn primary" href="{{ url_for('othello') }}">オセロを開始</a>
+            </article>
+
+            <article class="game-card shogi">
+                <span class="badge live">Live</span>
+                <h2>将棋</h2>
+                <p>9x9盤、持ち駒打ち、成り、王手/終局判定に対応した将棋をプレイできます。</p>
+                <a class="home-btn secondary" href="{{ url_for('shogi') }}">将棋ページへ</a>
+            </article>
+        </section>
+    </main>
+</body>
+
+</html>

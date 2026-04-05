@@ -1,0 +1,6 @@
+Flask==2.3.3
+Flask-SocketIO==5.3.6
+eventlet==0.33.3
+numpy==1.26.4
+onnx==1.16.2
+onnxruntime==1.18.1

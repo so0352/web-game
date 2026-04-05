@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webオセロ - 高度AI対応版</title>
+    <script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .home-nav {
+            position: absolute;
+            right: 1.5rem;
+            top: 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            text-decoration: none;
+            padding: 0.5rem 0.9rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        header {
+            position: relative;
+        }
+    </style>
+</head>
+
+<body class="othello-page">
+    <div class="container">
+        <header>
+            <a class="home-nav" href="{{ url_for('index') }}">Home</a>
+            <h1>Webオセロ</h1>
+        </header>
+
+        <main>
+            <aside class="matchmaking-panel" id="game-mode-panel">
+                <h3>プレイモード選択</h3>
+                <div class="match-actions">
+                    <button id="choose-single-mode-btn">一人プレイ</button>
+                    <button id="choose-multi-mode-btn" class="secondary">マルチプレイ</button>
+                </div>
+                <div class="match-status" id="mode-status-text">対戦モードを選択してください</div>
+            </aside>
+
+            <aside class="matchmaking-panel hidden" id="singleplayer-panel">
+                <h3>一人プレイ設定</h3>
+                <div class="match-field">
+                    <label>あなたの手番</label>
+                    <div class="mode-selector" id="single-seat-selector">
+                        <button id="single-seat-first-btn" class="mode-btn active" type="button">先手（黒）</button>
+                        <button id="single-seat-second-btn" class="mode-btn" type="button">後手（白）</button>
+                    </div>
+                </div>
+                <div class="match-field">
+                    <label for="single-ai-model-select">AIモデル</label>
+                    <select id="single-ai-model-select">
+                        <option value="minmax">MinMax</option>
+                        <option value="mcts">モンテカルロ</option>
+                    </select>
+                </div>
+                <div class="match-actions">
+                    <button id="start-single-btn" type="button">この設定で開始</button>
+                    <button id="back-from-single-btn" class="secondary" type="button">戻る</button>
+                </div>
+                <div class="match-status" id="single-status-text">先手/後手とAIモデルを選択してください</div>
+            </aside>
+
+            <aside class="matchmaking-panel hidden" id="matchmaking-panel">
+                <h3>オンライン対戦</h3>
+                <div class="match-field">
+                    <label for="player-name-input">プレイヤー名</label>
+                    <input id="player-name-input" type="text" maxlength="24" placeholder="あなたの名前">
+                </div>
+                <div class="match-field">
+                    <label for="match-password-input">合言葉</label>
+                    <input id="match-password-input" type="password" maxlength="32" placeholder="同じ合言葉でマッチします">
+                </div>
+                <div class="match-actions">
+                    <button id="start-match-btn">マッチング開始</button>
+                    <button id="cancel-match-btn" class="secondary" disabled>キャンセル</button>
+                </div>
+                <div class="match-status" id="match-status-text">プレイヤー名と合言葉を入力してください</div>
+            </aside>
+
+            <div class="game-board-container hidden" id="game-board-container">
+                <div id="game-board"></div>
+            </div>
+
+            <aside class="hidden" id="game-side-panel">
+                <div class="game-info-panel">
+                    <div class="info-section">
+                        <h3>ゲーム情報</h3>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">黒の石</div>
+                                <div class="stat-value" id="black-count">2</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">白の石</div>
+                                <div class="stat-value" id="white-count">2</div>
+                            </div>
+                        </div>
+
+                        <div class="turn-indicator">
+                            <div class="turn-color" id="turn-color"></div>
+                            <div class="turn-text" id="turn-text">黒のターン</div>
+                        </div>
+                    </div>
+
+                    <div class="info-section">
+                        <h3>ゲーム状態</h3>
+                        <div class="status-message" id="status-message">ゲームを開始してください</div>
+                        <div class="thinking-indicator hidden" id="thinking-indicator">
+                            <div class="thinking-text" id="thinking-text">AIが思考中です...</div>
+                            <div class="thinking-track">
+                                <div class="thinking-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls-panel">
+                    <div class="control-group">
+                        <h3>ゲームコントロール</h3>
+                        <div class="button-group">
+                            <button id="start-btn">新しいゲーム</button>
+                            <button id="reset-btn">リセット</button>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h3>対戦モード</h3>
+                        <div class="mode-selector">
+                            <button id="mode-manual-btn" class="mode-btn active">手動プレイ</button>
+                            <button id="mode-ai-btn" class="mode-btn">AIプレイ</button>
+                        </div>
+                        <p id="mode-description" class="mode-description">手動プレイ: 人間同士で対戦します。</p>
+                    </div>
+
+                    <div class="control-group hidden" id="ai-settings-group">
+                        <h3>AI設定（AIプレイ）</h3>
+
+                        <div class="ai-player-card">
+                            <div class="ai-player-header">
+                                <span class="ai-player-title">黒プレイヤー</span>
+                                <label class="ai-enable-label">
+                                    <input type="checkbox" id="black-ai-enable">
+                                    AIにする
+                                </label>
+                            </div>
+                            <div class="ai-config">
+                                <div class="ai-option">
+                                    <label for="black-algorithm">アルゴリズム</label>
+                                    <select id="black-algorithm">
+                                        <option value="minmax">MinMax</option>
+                                        <option value="mcts">モンテカルロ</option>
+                                    </select>
+                                </div>
+                                <div class="ai-option ai-param-row" id="black-depth-group">
+                                    <label for="black-depth">探索深さ (MinMax)</label>
+                                    <input id="black-depth" type="number" min="1" max="8" step="1" value="3">
+                                    <div class="param-hint">値が大きいほど強いが、思考時間が増えます</div>
+                                </div>
+                                <div class="ai-option ai-param-row hidden" id="black-iterations-group">
+                                    <label for="black-iterations">試行回数 (モンテカルロ)</label>
+                                    <input id="black-iterations" type="number" min="10" max="100000" step="10"
+                                        value="100">
+                                    <div class="param-hint">値が大きいほど精度が上がる傾向があります</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ai-player-card">
+                            <div class="ai-player-header">
+                                <span class="ai-player-title">白プレイヤー</span>
+                                <label class="ai-enable-label">
+                                    <input type="checkbox" id="white-ai-enable">
+                                    AIにする
+                                </label>
+                            </div>
+                            <div class="ai-config">
+                                <div class="ai-option">
+                                    <label for="white-algorithm">アルゴリズム</label>
+                                    <select id="white-algorithm">
+                                        <option value="minmax">MinMax</option>
+                                        <option value="mcts">モンテカルロ</option>
+                                    </select>
+                                </div>
+                                <div class="ai-option ai-param-row" id="white-depth-group">
+                                    <label for="white-depth">探索深さ (MinMax)</label>
+                                    <input id="white-depth" type="number" min="1" max="8" step="1" value="3">
+                                    <div class="param-hint">値が大きいほど強いが、思考時間が増えます</div>
+                                </div>
+                                <div class="ai-option ai-param-row hidden" id="white-iterations-group">
+                                    <label for="white-iterations">試行回数 (モンテカルロ)</label>
+                                    <input id="white-iterations" type="number" min="10" max="100000" step="10"
+                                        value="100">
+                                    <div class="param-hint">値が大きいほど精度が上がる傾向があります</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ai-status" id="ai-status">
+                            <span>AI設定: </span>
+                            <span id="ai-status-text">なし</span>
+                        </div>
+
+                        <button id="apply-ai-btn" style="width: 100%; margin-top: 1rem;">AI設定を適用</button>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <div class="role-modal hidden" id="role-modal">
+        <div class="role-modal-card">
+            <h3>先攻・後攻を選択</h3>
+            <p id="role-modal-description">部屋作成者として先攻/後攻を選んでください。</p>
+            <div class="role-modal-actions">
+                <button id="choose-first-btn">先攻で対局開始</button>
+                <button id="choose-second-btn" class="secondary">後攻で対局開始</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/common/client-common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ai-engine.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+</body>
+
+</html>

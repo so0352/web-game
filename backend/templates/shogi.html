@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web将棋</title>
+    <script src="{{ url_for('static', filename='vendor/socket.io.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shogi.css') }}">
+</head>
+
+<body>
+    <main class="shogi-container">
+        <header class="shogi-header">
+            <a class="home-link" href="{{ url_for('index') }}">Home</a>
+            <h1>Web将棋</h1>
+            <p>先手・後手を交互に操作できます。持ち駒の打ちと成りに対応しています。</p>
+        </header>
+
+        <section class="shogi-matchmaking hidden" id="shogi-matchmaking-panel">
+            <h2>オンライン対戦マッチング</h2>
+            <div class="match-row">
+                <label for="shogi-player-name-input">プレイヤー名</label>
+                <input id="shogi-player-name-input" type="text" maxlength="24" placeholder="あなたの名前">
+            </div>
+            <div class="match-row">
+                <label for="shogi-match-password-input">合言葉</label>
+                <input id="shogi-match-password-input" type="password" maxlength="32" placeholder="同じ合言葉でマッチします">
+            </div>
+            <div class="match-btn-row">
+                <button id="shogi-start-match-btn" type="button">マッチング開始</button>
+                <button id="shogi-cancel-match-btn" class="secondary" type="button" disabled>キャンセル</button>
+            </div>
+            <div class="match-status" id="shogi-match-status-text">プレイヤー名と合言葉を入力してください</div>
+        </section>
+
+        <section class="shogi-matchmaking" id="shogi-mode-panel">
+            <h2>プレイモード選択</h2>
+            <div class="match-btn-row">
+                <button id="shogi-choose-single-mode-btn" type="button">一人プレイ</button>
+                <button id="shogi-choose-multi-mode-btn" class="secondary" type="button">マルチプレイ</button>
+            </div>
+            <div class="match-status" id="shogi-mode-status-text">対戦モードを選択してください</div>
+        </section>
+
+        <section class="shogi-matchmaking hidden" id="shogi-singleplayer-panel">
+            <h2>一人プレイ設定</h2>
+            <div class="match-row">
+                <label>あなたの手番</label>
+                <div class="match-btn-row">
+                    <button id="shogi-single-first-btn" type="button">先手</button>
+                    <button id="shogi-single-second-btn" class="secondary" type="button">後手</button>
+                </div>
+            </div>
+            <div class="match-row">
+                <label for="shogi-single-ai-engine">AIモデル</label>
+                <select id="shogi-single-ai-engine">
+                    <option value="rule_based">Rule Based</option>
+                    <option value="minimax">Minimax</option>
+                    <option value="mcts">MCTS</option>
+                    <option value="ml">ML Policy (CPU)</option>
+                </select>
+            </div>
+            <div class="match-btn-row">
+                <button id="shogi-start-single-btn" type="button">この設定で開始</button>
+                <button id="shogi-back-from-single-btn" class="secondary" type="button">戻る</button>
+            </div>
+            <div class="match-status" id="shogi-single-status-text">先手/後手とAIモデルを選択してください</div>
+        </section>
+
+        <section class="shogi-main hidden" id="shogi-main-panel">
+            <div id="shogi-board"></div>
+
+            <aside class="shogi-side">
+                <h2 class="section-title">対局情報</h2>
+                <div class="turn-box">
+                    <strong id="turn-text">対局開始待ち</strong>
+                </div>
+                <div class="status-box" id="status-message">サーバー接続を待っています...</div>
+                <div class="thinking-indicator hidden" id="thinking-indicator">
+                    <div class="thinking-text" id="thinking-text">AIが思考中です...</div>
+                    <div class="thinking-track">
+                        <div class="thinking-bar"></div>
+                    </div>
+                </div>
+
+                <div class="display-settings-wrap">
+                    <h3 class="section-title">表示設定</h3>
+                    <label class="display-toggle">
+                        <input type="checkbox" id="auto-rotate-toggle">
+                        盤面を自動回転する
+                    </label>
+                </div>
+
+                <div class="hands-wrap">
+                    <h3 class="section-title">後手の持ち駒</h3>
+                    <div class="hand-row" id="white-hands"></div>
+
+                    <h3 class="section-title">先手の持ち駒</h3>
+                    <div class="hand-row" id="black-hands"></div>
+                </div>
+
+                <div class="ai-settings-wrap">
+                    <h3 class="section-title">将棋AI設定</h3>
+
+                    <div class="ai-row">
+                        <label><input type="checkbox" id="black-ai-enable"> 先手AI</label>
+                        <select id="black-ai-engine">
+                            <option value="rule_based">Rule Based</option>
+                            <option value="minimax">Minimax</option>
+                            <option value="mcts">MCTS</option>
+                            <option value="ml">ML Policy (CPU)</option>
+                            <option value="none">なし</option>
+                        </select>
+                        <select id="black-ai-difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+
+                    <div class="ai-row">
+                        <label><input type="checkbox" id="white-ai-enable"> 後手AI</label>
+                        <select id="white-ai-engine">
+                            <option value="rule_based">Rule Based</option>
+                            <option value="minimax">Minimax</option>
+                            <option value="mcts">MCTS</option>
+                            <option value="ml">ML Policy (CPU)</option>
+                            <option value="none">なし</option>
+                        </select>
+                        <select id="white-ai-difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+
+                    <div class="btn-row ai-btn-row">
+                        <button id="apply-ai-btn" class="secondary" type="button">AI設定を反映</button>
+                        <button id="clear-ai-btn" class="secondary" type="button">AI無効化</button>
+                    </div>
+                </div>
+
+                <div class="btn-row">
+                    <button id="new-game-btn">新しい対局</button>
+                    <button id="reset-btn" class="secondary">リセット</button>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <div class="role-modal hidden" id="shogi-role-modal">
+        <div class="role-modal-card">
+            <h3>先手・後手を選択</h3>
+            <p id="shogi-role-modal-description">部屋作成者として先手/後手を選んでください。</p>
+            <div class="role-modal-actions">
+                <button id="shogi-choose-first-btn" type="button">先手で開始</button>
+                <button id="shogi-choose-second-btn" class="secondary" type="button">後手で開始</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/common/client-common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/shogi.js') }}"></script>
+</body>
+
+</html>
