@@ -37,6 +37,15 @@ docker compose down
 
 Caddy が証明書を自動取得し、HTTPS 配信します。
 
+### SECRET_KEY の生成方法
+
+OpenSSL で 256 ビットのランダムキーを生成：
+
+```bash
+openssl rand -hex 32
+```
+
+
 ## ゲームモード
 
 ### オセロ
