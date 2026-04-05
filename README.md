@@ -26,8 +26,8 @@ docker compose up --build
 
 ### 公開サーバーで使う場合
 
-1. `PUBLIC_DOMAIN` に公開するドメイン名を設定してください。
-2. `SECRET_KEY` も本番用の十分長い値に置き換えてください。
+1. `.env.example` を `.env` にコピーし、`PUBLIC_DOMAIN` と `SECRET_KEY` を設定してください。
+2. `SECRET_KEY` は本番用の十分長い値に置き換えてください。
 3. `docker compose up -d --build` で起動します。
 4. DNS でドメインをサーバーに向け、80/443 を開放してください。
 5. Caddy が証明書を取得し、HTTPS で公開されます。
