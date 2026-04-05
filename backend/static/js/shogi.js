@@ -44,6 +44,22 @@ function normalizeShogiEngine(engine) {
     return engine === 'onnx' ? 'ml' : engine;
 }
 
+function isServerBackedShogiEngine(engine) {
+    const normalized = normalizeShogiEngine(engine || 'none');
+    return normalized === 'ml';
+}
+
+function resolveSingleplayerEngineScopeFromControls() {
+    const blackEnabled = !!document.getElementById('black-ai-enable')?.checked;
+    const whiteEnabled = !!document.getElementById('white-ai-enable')?.checked;
+    const blackEngine = document.getElementById('black-ai-engine')?.value || 'none';
+    const whiteEngine = document.getElementById('white-ai-engine')?.value || 'none';
+
+    const usesServerEngine = (blackEnabled && isServerBackedShogiEngine(blackEngine))
+        || (whiteEnabled && isServerBackedShogiEngine(whiteEngine));
+    return usesServerEngine ? 'server' : 'browser';
+}
+
 const PIECE_TEXT = {
     1: '歩',
     2: '香',
@@ -308,19 +324,21 @@ function requestShogiSingleStart() {
         mode: 'singleplayer'
     });
 
+    const selectedEngine = normalizeShogiEngine(engineSelect.value || 'rule_based');
+    const engineScope = isServerBackedShogiEngine(selectedEngine) ? 'server' : 'browser';
     const aiColor = shogiSingleSeat === 'first' ? 'white' : 'black';
     const humanColor = aiColor === 'black' ? 'white' : 'black';
 
     shogiSocket.emit('set_ai', {
         game_id: currentShogiGameId,
         color: aiColor,
-        algorithm: engineSelect.value,
-        engine: engineSelect.value,
+        algorithm: selectedEngine,
+        engine: selectedEngine,
         difficulty: 'medium',
         depth: 2,
         iterations: 220,
         time_budget_ms: 800,
-        engine_scope: 'browser'
+        engine_scope: engineScope
     });
 
     shogiSocket.emit('set_ai', {
@@ -329,7 +347,7 @@ function requestShogiSingleStart() {
         algorithm: 'none',
         engine: 'none',
         difficulty: 'medium',
-        engine_scope: 'browser'
+        engine_scope: engineScope
     });
 
     shogiSocket.emit('get_ai_info', { game_id: currentShogiGameId });
@@ -876,6 +894,7 @@ function emitAISetting(color) {
     const enabled = document.getElementById(isBlack ? 'black-ai-enable' : 'white-ai-enable').checked;
     const engine = document.getElementById(isBlack ? 'black-ai-engine' : 'white-ai-engine').value;
     const difficulty = document.getElementById(isBlack ? 'black-ai-difficulty' : 'white-ai-difficulty').value;
+    const engineScope = resolveSingleplayerEngineScopeFromControls();
 
     if (!enabled || engine === 'none') {
         shogiSocket.emit('set_ai', {
@@ -884,7 +903,7 @@ function emitAISetting(color) {
             algorithm: 'none',
             engine: 'none',
             difficulty,
-            engine_scope: 'browser'
+            engine_scope: engineScope
         });
         return;
     }
@@ -899,7 +918,7 @@ function emitAISetting(color) {
         depth: config.depth,
         iterations: config.iterations,
         time_budget_ms: config.timeBudgetMs,
-        engine_scope: 'browser'
+        engine_scope: engineScope
     });
 }
 
